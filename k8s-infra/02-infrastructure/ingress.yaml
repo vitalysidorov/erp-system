@@ -1,0 +1,156 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: erp-public-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "5"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "10"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: bff
+      http:
+        paths:
+          - path: /bff/api/v1/client/bookings/
+            pathType: Prefix
+            backend:
+              service:
+                name: bff
+                port:
+                  number: 8080
+
+          - path: /bff/api/v1/b2c/
+            pathType: Prefix
+            backend:
+              service:
+                name: bff
+                port:
+                  number: 8080
+
+          - path: /api/v1/auth/
+            pathType: Prefix
+            backend:
+              service:
+                name: erp
+                port:
+                  number: 8085
+
+          - path: /oauth2/
+            pathType: Prefix
+            backend:
+              service:
+                name: erp
+                port:
+                  number: 8085
+
+          - path: /bff/swagger-ui.html
+            pathType: Prefix
+            backend:
+              service:
+                name: bff
+                port:
+                  number: 8080
+          - path: /bff/swagger-ui/
+            pathType: Prefix
+            backend:
+              service:
+                name: bff
+                port:
+                  number: 8080
+          - path: /bff/v3/api-docs
+            pathType: Prefix
+            backend:
+              service:
+                name: bff
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: erp-private-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
+    nginx.ingress.kubernetes.io/compute-full-forwarded-for: "true"
+    nginx.ingress.kubernetes.io/whitelist-source-range: "127.0.0.1/32, 192.168.0.0/24, 10.0.0.0/8, 172.16.0.0/12"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: erp.local
+      http:
+        paths:
+          - path: /api/v1/work-orders/
+            pathType: Prefix
+            backend:
+              service:
+                name: erp
+                port:
+                  number: 8085
+          - path: /api/v1/bookings/
+            pathType: Prefix
+            backend:
+              service:
+                name: erp
+                port:
+                  number: 8085
+          - path: /api/v1/mechanic/
+            pathType: Prefix
+            backend:
+              service:
+                name: erp
+                port:
+                  number: 8085
+          - path: /api/v1/inventory/
+            pathType: Prefix
+            backend:
+              service:
+                name: erp
+                port:
+                  number: 8085
+          - path: /api/v1/crm/
+            pathType: Prefix
+            backend:
+              service:
+                name: erp
+                port:
+                  number: 8085
+          - path: /api/v1/analytics/
+            pathType: Prefix
+            backend:
+              service:
+                name: erp
+                port:
+                  number: 8085
+          - path: /api/v1/employees/
+            pathType: Prefix
+            backend:
+              service:
+                name: erp
+                port:
+                  number: 8085
+
+          - path: /v3/api-docs/
+            pathType: Prefix
+            backend:
+              service:
+                name: erp
+                port:
+                  number: 8085
+          - path: /swagger-ui.html
+            pathType: Prefix
+            backend:
+              service:
+                name: erp
+                port:
+                  number: 8085
+          - path: /swagger-ui/
+            pathType: Prefix
+            backend:
+              service:
+                name: erp
+                port:
+                  number: 8085

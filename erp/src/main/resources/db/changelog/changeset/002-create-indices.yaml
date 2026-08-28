@@ -1,0 +1,51 @@
+databaseChangeLog:
+- changeSet:
+    id: 002-create-indices
+    author: vs
+    changes:
+      - createIndex:
+          tableName: crm_vehicles
+          indexName: idx_vehicles_plate_num
+          columns:
+            - column: { name: plate_number }
+
+      - createIndex:
+          tableName: crm_clients
+          indexName: idx_clients_last_name
+          columns:
+            - column: { name: last_name }
+
+      - createIndex:
+          tableName: inv_parts_catalog
+          indexName: idx_parts_catalog_brand
+          columns:
+            - column: { name: brand }
+
+      - createIndex:
+          tableName: ord_services_catalog
+          indexName: idx_services_catalog_name
+          columns:
+            - column: { name: name }
+
+      - createIndex:
+          tableName: ord_bookings
+          indexName: idx_bookings_time_range
+          columns:
+            - column: { name: start_time }
+            - column: { name: end_time }
+
+      - createIndex:
+          tableName: ord_order_services
+          indexName: idx_order_services_mechanic
+          columns:
+            - column: { name: mechanic_id }
+
+      - createIndex:
+          tableName: fin_transactions
+          indexName: idx_fin_tx_analytics
+          columns:
+            - column: { name: created_at }
+            - column: { name: type }
+
+      - sql:
+          sql: CREATE INDEX idx_active_work_orders ON ord_work_orders (vehicle_id) WHERE status IN ('OPENED', 'IN_PROGRESS', 'COMPLETED');

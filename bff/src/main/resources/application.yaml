@@ -1,0 +1,83 @@
+server:
+  port: ${SERVER_PORT:8080}
+  ssl:
+    enabled: ${SSL_ENABLED:false}
+
+erp:
+  server:
+    host: ${ERP_SERVER_HOST:erp-svc}
+    port: ${ERP_SERVER_PORT:8085}
+
+app:
+  security:
+    jwt:
+      secret-key: ${JWT_ACCESS_SECRET}
+
+spring:
+  webflux:
+    base-path: /bff
+  application:
+    name: bff
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jws-algorithms: HS256
+
+  data:
+    redis:
+      password: ${REDIS_PASSWORD:redis_password}
+      timeout: ${REDIS_TIMEOUT:2000ms}
+      ssl:
+        enabled: true
+      sentinel:
+        master: erp-redis-master
+        nodes:
+          - ${REDIS_SENTINEL_HOST:erp-redis-sentinel}:26379
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    persistAuthorization: true
+  api-docs:
+    path: /v3/api-docs
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  endpoints:
+    web:
+      exposure:
+        include: health, metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  include-application-name: false
+  level:
+    root: INFO
+    org.springframework.security: DEBUG
+    org.springframework.web.reactive.function.client.WebClient: DEBUG
+    by.vs.bff: DEBUG
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      erpBookingService:
+        slidingWindowType: ${CIRCUIT_BREAKER_SLIDING_WINDOW_TYPE:COUNT_BASED}
+        slidingWindowSize: ${CIRCUIT_BREAKER_SLIDING_WINDOW_SIZE:10}
+        failureRateThreshold: ${CIRCUIT_BREAKER_FAILURE_RATE_THRESHOLD:50}
+        slowCallRateThreshold: ${CIRCUIT_BREAKER_SLOW_CALL_RATE_THRESHOLD:75}
+        slowCallDurationThreshold: ${CIRCUIT_BREAKER_SLOW_CALL_DURATION_THRESHOLD:2000ms}
+        waitDurationInOpenState: ${CIRCUIT_BREAKER_WAIT_DURATION_IN_OPEN_STATE:15000ms}
+        permittedNumberOfCallsInHalfOpenState: ${CIRCUIT_BREAKER_PERMITTED_NUMBER_OF_CALLS_IN_HALF_OPEN_STATE:3}
+        automaticTransitionFromOpenToHalfOpenEnabled: ${CIRCUIT_BREAKER_AUTOMATIC_TRANSITION_FROM_OPEN_TO_HALF_OPEN_ENABLED:true}
+  ratelimiter:
+    instances:
+      b2cRateLimiter:
+        limitForPeriod: ${RATE_LIMITER_LIMIT_FOR_PERIOD:5}
+        limitRefreshPeriod: ${RATE_LIMITER_LIMIT_REFRESH_PERIOD:2s}
+        timeoutDuration: ${RATE_LIMITER_TIMEOUT_DURATION:0ms}

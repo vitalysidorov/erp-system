@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: erp-test
+
+    inventory:
+      default-markup: ${INVENTORY_DEFAULT_MARKUP:1.3}
+      min-limit: ${INVENTORY_MIN_LIMIT:5}
+
+  datasource:
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5432/erp_test_db}
+    username: ${TEST_DB_USERNAME:postgres}
+    password: ${TEST_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    enabled: true
+
+  cache:
+    type: ${TEST_CACHE_TYPE:none}
+    redis:
+      time-to-live: ${CACHE_TTL:3600000}
+
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+  elasticsearch:
+    uris: ${ELASTIC_URIS:http://localhost:9201}
+    username: ${ELASTIC_USERNAME:elastic}
+    password: ${ELASTIC_PASSWORD}
+    connection-timeout: 5s
+    socket-timeout: 30s
+
+jwt:
+  access-secret: ${JWT_ACCESS_SECRET}
+  refresh-secret: ${JWT_REFRESH_SECRET}
+  access-expiration: ${JWT_ACCESS_EXPIRATION:900000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+server:
+  port: 0

@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-new-tables
+      author: vs
+      changes:
+        - createTable:
+            tableName: ord_car_classes
+            columns:
+              - column: { name: id, type: bigint, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: brand, type: 'varchar(50)', constraints: { nullable: false, unique: true } }
+              - column: { name: price_coefficient, type: 'numeric(3,2)', defaultValueNumeric: '1.00', constraints: { nullable: false } }
+
+        - createTable:
+            tableName: inv_part_batches
+            columns:
+              - column: { name: id, type: bigint, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: part_id, type: bigint, constraints: { nullable: false, foreignKeyName: fk_batch_part, referencedTableName: inv_parts_catalog, referencedColumnNames: id } }
+              - column: { name: initial_quantity, type: int, constraints: { nullable: false } }
+              - column: { name: available_quantity, type: int, constraints: { nullable: false } }
+              - column: { name: purchase_price, type: 'numeric(12,2)', constraints: { nullable: false } }
+              - column: { name: received_at, type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+
+        - createTable:
+            tableName: ord_order_status_log
+            columns:
+              - column: { name: id, type: bigint, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: work_order_id, type: bigint, constraints: { nullable: false, foreignKeyName: fk_log_order, referencedTableName: ord_work_orders, referencedColumnNames: id, deleteCascade: true } }
+              - column: { name: from_status, type: 'varchar(20)' }
+              - column: { name: to_status, type: 'varchar(20)', constraints: { nullable: false } }
+              - column: { name: changed_at, type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: changed_by_id, type: bigint, constraints: { nullable: false, foreignKeyName: fk_log_employee, referencedTableName: usr_employees, referencedColumnNames: id } }
+
+        - createIndex:
+            tableName: ord_order_status_log
+            indexName: idx_order_status_history
+            columns:
+              - column: { name: work_order_id }

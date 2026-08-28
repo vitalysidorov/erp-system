@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: erp
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: erp
+  template:
+    metadata:
+      labels:
+        app: erp
+    spec:
+      containers:
+        - name: erp
+          image: your-registry/erp:latest
+          ports:
+            - containerPort: 8085
+          resources:
+            requests:
+              memory: "384Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xms256m -Xmx256m"
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
+
+            - name: PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pg-user-db-secret
+                  key: password
+
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: erp-elastic-es-elastic-user
+                  key: elastic
+
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: erp-redis
+                  key: redis-password
+
+            - name: JWT_ACCESS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: bff-jwt-secret
+                  key: access-secret
+
+            - name: JWT_REFRESH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: bff-jwt-secret
+                  key: refresh-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: erp
+  namespace: default
+spec:
+  selector:
+    app: erp
+  ports:
+    - protocol: TCP
+      port: 8085
+      targetPort: 8085

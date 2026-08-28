@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-create-fifo-index
+      author: vs
+      changes:
+        - createIndex:
+            tableName: inv_part_batches
+            indexName: idx_fifo_parts_lookup
+            columns:
+              - column: { name: part_id }
+              - column: { name: available_quantity }
+              - column: { name: received_at }

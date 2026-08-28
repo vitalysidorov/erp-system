@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changeset/001-create-base-tables.yaml
+  - include:
+      file: db/changelog/changeset/002-create-indices.yaml
+  - include:
+      file: db/changelog/changeset/003-create-new-tables.yaml
+  - include:
+      file: db/changelog/changeset/004-create-fifo-index.yaml
+  - include:
+      file: db/changelog/changeset/005-update-base-tables.yaml

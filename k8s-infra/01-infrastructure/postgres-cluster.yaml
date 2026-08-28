@@ -1,0 +1,27 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: erp-postgres-cluster
+  namespace: default
+spec:
+  instances: 2
+  failoverDelay: 10
+  storage:
+    size: 2Gi
+    storageClass: standard
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+  postgresql:
+    parameters:
+      shared_buffers: "32MB"
+      max_connections: "20"
+  bootstrap:
+    initdb:
+      database: erp_db
+      owner: erp_user
+      secret:
+        name: pg-user-db-secret

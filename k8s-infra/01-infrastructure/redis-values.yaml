@@ -1,0 +1,31 @@
+architecture: replication 
+
+auth:
+  password: "redis_password"
+  sentinel: true
+
+tls:
+  enabled: true
+  authClients: false
+  existingSecret: "redis-tls-cert"
+  certFilename: "redis.crt"
+  certKeyFilename: "redis.key"
+  certCAFilename: "ca.crt"
+
+sentinel:
+  enabled: true 
+  masterSet: erp-redis-master
+  quorum: 1
+
+master:
+  persistence:
+    enabled: false
+  resources:
+    limits: { memory: 64Mi, cpu: 100m }
+
+replica:
+  replicaCount: 1 
+  persistence:
+    enabled: false
+  resources:
+    limits: { memory: 64Mi, cpu: 100m }

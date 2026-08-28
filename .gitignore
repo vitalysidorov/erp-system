@@ -1,0 +1,28 @@
+# Игнорирование сборки Java/Maven
+target/
+*.jar
+*.war
+*.ear
+.mvn/
+wrapper/
+
+# Игнорирование настроек IDE
+.idea/
+*.iml
+*.iws
+.classpath
+.project
+.settings/
+.vscode/
+
+# Игнорирование логов и временных файлов
+*.log
+tmp/
+
+# КРИТИЧНО: Локальные секреты, сертификаты и конфигурации
+*.key
+*.crt
+*.csr
+*.srl
+.env
+kubeconfig

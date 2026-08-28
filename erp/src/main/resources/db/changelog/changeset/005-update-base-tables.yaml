@@ -1,0 +1,24 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-update-base-tables
+      author: vs
+      changes:
+        - addColumn:
+            tableName: crm_clients
+            columns:
+              - column:
+                  name: password_hash
+                  type: 'varchar(100)'
+                  constraints:
+                    nullable: false
+              - column:
+                  name: refresh_token
+                  type: 'varchar(500)'
+                  constraints:
+                    nullable: true
+              - column:
+                  name: role
+                  type: 'varchar(30)'
+                  defaultValue: "CLIENT"
+                  constraints:
+                    nullable: false

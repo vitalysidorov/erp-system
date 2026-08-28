@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bff
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bff
+  template:
+    metadata:
+      labels:
+        app: bff
+    spec:
+      containers:
+        - name: bff
+          image: your-registry/bff:latest
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "384Mi"
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xms128m -Xmx128m"
+            - name: ERP_MONOLITH_URL
+              value: "http://erp-svc:8085"
+
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: erp-redis
+                  key: redis-password
+
+            - name: REDIS_SENTINEL_HOST
+              value: "erp-redis-sentinel"
+
+            - name: JWT_ACCESS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: bff-jwt-secret
+                  key: access-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bff
+  namespace: default
+spec:
+  selector:
+    app: bff
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080

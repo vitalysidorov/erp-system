@@ -1,0 +1,117 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-base-tables
+      author: vs
+      changes:
+        - createTable:
+            tableName: usr_employees
+            columns:
+              - column: { name: id, type: bigint, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: email, type: 'varchar(100)', constraints: { nullable: false, unique: true } }
+              - column: { name: password_hash, type: 'varchar(100)', constraints: { nullable: false } }
+              - column: { name: refresh_token, type: 'varchar(500)' }
+              - column: { name: last_name, type: 'varchar(50)', constraints: { nullable: false } }
+              - column: { name: first_name, type: 'varchar(50)', constraints: { nullable: false } }
+              - column: { name: role, type: 'varchar(30)', constraints: { nullable: false } } # MASTER, MECHANIC, MANAGER
+              - column: { name: salary_rate_percent, type: 'numeric(5,2)', defaultValueNumeric: '0.00' }
+              - column: { name: is_active, type: boolean, defaultValueBoolean: true, constraints: { nullable: false } }
+
+        - createTable:
+            tableName: crm_clients
+            columns:
+              - column: { name: id, type: bigint, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: last_name, type: 'varchar(50)', constraints: { nullable: false } }
+              - column: { name: first_name, type: 'varchar(50)', constraints: { nullable: false } }
+              - column: { name: phone, type: 'varchar(20)', constraints: { nullable: false, unique: true } }
+
+        - createTable:
+            tableName: crm_vehicles
+            columns:
+              - column: { name: id, type: bigint, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: client_id, type: bigint, constraints: { nullable: false, foreignKeyName: fk_vehicles_client, referencedTableName: crm_clients, referencedColumnNames: id } }
+              - column: { name: vin, type: 'varchar(17)', constraints: { nullable: false, unique: true } }
+              - column: { name: make, type: 'varchar(50)', constraints: { nullable: false } }
+              - column: { name: model, type: 'varchar(50)', constraints: { nullable: false } }
+              - column: { name: plate_number, type: 'varchar(20)' }
+
+        - createTable:
+            tableName: inv_parts_catalog
+            columns:
+              - column: { name: id, type: bigint, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: oem_number, type: 'varchar(50)', constraints: { nullable: false, unique: true } }
+              - column: { name: name, type: 'varchar(255)', constraints: { nullable: false } }
+              - column: { name: brand, type: 'varchar(50)', constraints: { nullable: false } }
+
+        - createTable:
+            tableName: inv_stocks
+            columns:
+              - column: { name: id, type: bigint, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: part_id, type: bigint, constraints: { nullable: false, unique: true, foreignKeyName: fk_stock_part, referencedTableName: inv_parts_catalog, referencedColumnNames: id } }
+              - column: { name: quantity, type: int, defaultValueNumeric: '0', constraints: { nullable: false } }
+              - column: { name: purchase_price, type: 'numeric(12,2)', constraints: { nullable: false } }
+              - column: { name: retail_price, type: 'numeric(12,2)', constraints: { nullable: false } }
+
+        - createTable:
+            tableName: ord_services_catalog
+            columns:
+              - column: { name: id, type: bigint, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: name, type: 'varchar(255)', constraints: { nullable: false, unique: true } }
+              - column: { name: norm_hours, type: 'numeric(5,2)', constraints: { nullable: false } }
+              - column: { name: hour_rate_price, type: 'numeric(12,2)', constraints: { nullable: false } }
+
+        - createTable:
+            tableName: ord_bookings
+            columns:
+              - column: { name: id, type: bigint, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: created_by, type: varchar, constraints: { nullable: false } }
+              - column: { name: source, type: 'varchar(20)', constraints: { nullable: false } }
+              - column: { name: vehicle_id, type: bigint, constraints: { nullable: false, foreignKeyName: fk_booking_vehicle, referencedTableName: crm_vehicles, referencedColumnNames: id } }
+              - column: { name: start_time, type: timestamp, constraints: { nullable: false } }
+              - column: { name: end_time, type: timestamp, constraints: { nullable: false } }
+              - column: { name: status, type: 'varchar(20)', defaultValue: "PENDING", constraints: { nullable: false } } # PENDING, CONFIRMED, CANCELLED
+
+        - createTable:
+            tableName: ord_work_orders
+            columns:
+              - column: { name: id, type: bigint, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: vehicle_id, type: bigint, constraints: { nullable: false, foreignKeyName: fk_orders_vehicle, referencedTableName: crm_vehicles, referencedColumnNames: id } }
+              - column: { name: master_id, type: bigint, constraints: { nullable: false, foreignKeyName: fk_orders_master, referencedTableName: usr_employees, referencedColumnNames: id } }
+              - column: { name: status, type: 'varchar(20)', defaultValue: "OPENED", constraints: { nullable: false } } # OPENED, IN_PROGRESS, COMPLETED, CLOSED
+              - column: { name: mileage_in, type: int, constraints: { nullable: false } }
+              - column: { name: fuel_level, type: 'varchar(20)' }
+              - column: { name: damages_notes, type: text }
+              - column: { name: created_at, type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: closed_at, type: timestamp }
+
+        - createTable:
+            tableName: ord_order_services
+            columns:
+              - column: { name: id, type: bigint, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: work_order_id, type: bigint, constraints: { nullable: false, foreignKeyName: fk_ord_serv_order, referencedTableName: ord_work_orders, referencedColumnNames: id, deleteCascade: true } }
+              - column: { name: service_id, type: bigint, constraints: { nullable: false, foreignKeyName: fk_ord_serv_catalog, referencedTableName: ord_services_catalog, referencedColumnNames: id } }
+              - column: { name: mechanic_id, type: bigint, constraints: { nullable: false, foreignKeyName: fk_ord_serv_mechanic, referencedTableName: usr_employees, referencedColumnNames: id } }
+              - column: { name: quantity, type: int, defaultValueNumeric: '1', constraints: { nullable: false } }
+              - column: { name: final_price, type: 'numeric(12,2)', constraints: { nullable: false } }
+
+        - createTable:
+            tableName: ord_order_parts
+            columns:
+              - column: { name: id, type: bigint, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: work_order_id, type: bigint, constraints: { nullable: false, foreignKeyName: fk_ord_parts_order, referencedTableName: ord_work_orders, referencedColumnNames: id, deleteCascade: true } }
+              - column: { name: part_id, type: bigint, constraints: { nullable: false, foreignKeyName: fk_ord_parts_catalog, referencedTableName: inv_parts_catalog, referencedColumnNames: id } }
+              - column: { name: quantity, type: int, constraints: { nullable: false } }
+              - column: { name: final_price, type: 'numeric(12,2)', constraints: { nullable: false } }
+
+        - createTable:
+            tableName: fin_transactions
+            columns:
+              - column: { name: id, type: bigint, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: work_order_id, type: bigint, constraints: { foreignKeyName: fk_tx_order, referencedTableName: ord_work_orders, referencedColumnNames: id } }
+              - column: { name: type, type: 'varchar(20)', constraints: { nullable: false } } # INCOME, EXPENSE
+              - column: { name: amount, type: 'numeric(12,2)', constraints: { nullable: false } }
+              - column: { name: created_at, type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+
+        - sql:
+            sql: ALTER TABLE inv_stocks ADD CONSTRAINT chk_stock_quantity CHECK (quantity >= 0);
+        - sql:
+            sql: ALTER TABLE ord_order_parts ADD CONSTRAINT chk_order_parts_quantity CHECK (quantity > 0);
