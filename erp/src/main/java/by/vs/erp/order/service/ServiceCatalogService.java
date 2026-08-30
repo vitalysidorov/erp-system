@@ -1,5 +1,6 @@
 package by.vs.erp.order.service;
 
+import by.vs.erp.common.exception.NotFoundException;
 import by.vs.erp.order.entity.ServiceCatalog;
 import by.vs.erp.order.repository.ServiceCatalogRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,6 @@ public class ServiceCatalogService {
     @Transactional(readOnly = true)
     public ServiceCatalog findById(Long id) {
         return serviceCatalogRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Услуга не найдена в каталоге"));
+                .orElseThrow(() -> new NotFoundException("Услуга не найдена в каталоге"));
     }
 }

@@ -4,7 +4,7 @@ metadata:
   name: erp
   namespace: default
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: erp
@@ -16,6 +16,7 @@ spec:
       containers:
         - name: erp
           image: your-registry/erp:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8085
           resources:
@@ -24,41 +25,57 @@ spec:
               cpu: "100m"
             limits:
               memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8085
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8085
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3
           env:
             - name: JAVA_TOOL_OPTIONS
               value: "-Xms256m -Xmx256m"
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
-
             - name: PG_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: pg-user-db-secret
                   key: password
-
             - name: ELASTIC_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: erp-elastic-es-elastic-user
                   key: elastic
-
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: erp-redis
                   key: redis-password
-
             - name: JWT_ACCESS_SECRET
               valueFrom:
                 secretKeyRef:
                   name: bff-jwt-secret
                   key: access-secret
-
             - name: JWT_REFRESH_SECRET
               valueFrom:
                 secretKeyRef:
                   name: bff-jwt-secret
                   key: refresh-secret
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: erp-rabbitmq-secret
+                  key: password
 ---
 apiVersion: v1
 kind: Service
@@ -72,3 +89,34 @@ spec:
     - protocol: TCP
       port: 8085
       targetPort: 8085
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: erp-pdb
+  namespace: default
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: erp
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: erp-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: erp
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

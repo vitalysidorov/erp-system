@@ -32,10 +32,10 @@ public class JwtProvider {
         this.refreshExpiration = refreshExpiration;
     }
 
-    public String generateAccessToken(String username, String role) {
+    public String generateAccessToken(String userId, String username, String role) {
         return Jwts.builder()
                 .subject(username)
-                .claims(Map.of("role", role))
+                .claims(Map.of("role", role, "userId", userId))
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessExpiration))
                 .signWith(accessKey)

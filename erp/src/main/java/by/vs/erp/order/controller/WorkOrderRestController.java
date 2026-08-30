@@ -1,5 +1,7 @@
 package by.vs.erp.order.controller;
 
+import by.vs.erp.common.exception.NotFoundException;
+import by.vs.erp.common.security.UserPrincipal;
 import by.vs.erp.order.dto.CreateWorkOrderRequestDto;
 import by.vs.erp.order.dto.WorkOrderResponseDto;
 import by.vs.erp.order.entity.ServiceCatalog;
@@ -50,7 +52,7 @@ public class WorkOrderRestController {
         ServiceCatalog service = serviceCatalogService.findById(serviceCatalogId);
 
         Employee mechanic = employeeRepository.findById(mechanicId)
-                .orElseThrow(() -> new IllegalArgumentException("Указанный механик не найден в штате"));
+                .orElseThrow(() -> new NotFoundException("Указанный механик не найден в штате"));
 
         workOrderService.addServiceToOrder(orderId, service, mechanic);
         return ResponseEntity.ok().build();
@@ -61,11 +63,11 @@ public class WorkOrderRestController {
     public ResponseEntity<Void> changeStatus(
             @PathVariable Long id,
             @RequestParam String newStatus,
-            @AuthenticationPrincipal String managerEmail) {
+            @AuthenticationPrincipal UserPrincipal principal) {
 
-        log.info("API: Изменение статуса заказа #{} на '{}' оператором с email: {}", id, newStatus, managerEmail);
+        log.info("API: Изменение статуса заказа #{} на '{}' оператором с id: {}", id, newStatus, principal.id());
 
-        Employee manager = employeeRepository.findByEmail(managerEmail)
+        Employee manager = employeeRepository.findByEmail(principal.username())
                 .orElseThrow(() -> new IllegalArgumentException("Авторизованный менеджер/мастер не найден в системе"));
 
         workOrderService.changeOrderStatus(id, newStatus, manager);

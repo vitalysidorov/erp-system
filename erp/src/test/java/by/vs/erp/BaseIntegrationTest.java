@@ -9,5 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 @ActiveProfiles("test")
 @Transactional
 @AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(MockInfrastructureConfig.class)
 public abstract class BaseIntegrationTest {
 }

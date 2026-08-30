@@ -1,0 +1,72 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-insert-demo-data
+      author: vs
+      changes:
+        - sql:
+            dbms: postgresql
+            endDelimiter: ;
+            sql: |
+              -- 1. Заливаем сотрудников (Пароль для всех: 'password', хэширован BCrypt)
+              INSERT INTO usr_employees (email, password_hash, last_name, first_name, role, salary_rate_percent, is_active)
+              VALUES 
+                ('manager@auto.by', '$2a$10$X8OpxmGUpB6A78NsmHjCduQ2w.UjN6u9B2yMvUf3eY7xW1LhVwN0m', 'Иванов', 'Сергей', 'MANAGER', 40.00, true),
+                ('master1@auto.by', '$2a$10$X8OpxmGUpB6A78NsmHjCduQ2w.UjN6u9B2yMvUf3eY7xW1LhVwN0m', 'Петров', 'Алексей', 'MASTER', 35.00, true),
+                ('mechanic1@auto.by', '$2a$10$X8OpxmGUpB6A78NsmHjCduQ2w.UjN6u9B2yMvUf3eY7xW1LhVwN0m', 'Козлов', 'Николай', 'MECHANIC', 45.00, true)
+              ON CONFLICT (email) DO NOTHING;
+
+              -- 2. Заливаем клиентов
+              INSERT INTO crm_clients (last_name, first_name, phone, password_hash, role)
+              VALUES 
+                ('Васильев', 'Андрей', '+375291112233', '$2a$10$X8OpxmGUpB6A78NsmHjCduQ2w.UjN6u9B2yMvUf3eY7xW1LhVwN0m', 'CLIENT'),
+                ('Федоров', 'Виталий', '+375294445566', '$2a$10$X8OpxmGUpB6A78NsmHjCduQ2w.UjN6u9B2yMvUf3eY7xW1LhVwN0m', 'CLIENT')
+              ON CONFLICT (phone) DO NOTHING;
+
+              -- 3. Каталог запчастей
+              INSERT INTO inv_parts_catalog (id, oem_number, name, brand)
+              VALUES 
+                (1, '50830TA0A01', 'Опора двигателя правая', 'Honda'),
+                (2, '0446502220', 'Колодки тормозные передние', 'Toyota'),
+                (3, 'W71294', 'Фильтр масляный', 'Mann')
+              ON CONFLICT (oem_number) DO NOTHING;
+              ALTER SEQUENCE inv_parts_catalog_id_seq RESTART WITH 4;
+
+              -- 4. Сводный складской остаток (inv_stocks)
+              INSERT INTO inv_stocks (part_id, quantity, purchase_price, retail_price)
+              VALUES 
+                (1, 10, 120.00, 165.00),
+                (2, 35, 35.00, 55.00),
+                (3, 80, 8.50, 14.00)
+              ON CONFLICT (part_id) DO NOTHING;
+
+              -- 5. Партии запчастей для FIFO-логики (inv_part_batches)
+              INSERT INTO inv_part_batches (part_id, initial_quantity, available_quantity, purchase_price, received_at)
+              VALUES 
+                (1, 10, 10, 120.00, '2026-08-01 10:00:00'),
+                (2, 35, 35, 35.00, '2026-08-05 11:30:00'),
+                (3, 80, 80, 8.50, '2026-08-10 09:15:00')
+              ON CONFLICT DO NOTHING;
+
+              -- 6. Каталог услуг СТО
+              INSERT INTO ord_services_catalog (id, name, norm_hours, hour_rate_price)
+              VALUES 
+                (1, 'Замена масла в двигателе', 0.50, 60.00),
+                (2, 'Замена передних тормозных колодок', 1.20, 65.00)
+              ON CONFLICT (name) DO NOTHING;
+              ALTER SEQUENCE ord_services_catalog_id_seq RESTART WITH 3;
+
+              -- 7. Классы и коэффициенты марок авто
+              INSERT INTO ord_car_classes (brand, price_coefficient)
+              VALUES 
+                ('Toyota', 1.00),
+                ('Honda', 1.10),
+                ('BMW', 1.40)
+              ON CONFLICT (brand) DO NOTHING;
+
+              -- 8. Автомобили клиентов
+              INSERT INTO crm_vehicles (id, client_id, vin, make, model, plate_number)
+              VALUES 
+                (1, 1, 'JH4CU21609C000123', 'Honda', 'Accord', '7777 AB-7'),
+                (2, 2, 'JTDKN3DU001456789', 'Toyota', 'Camry', '1234 KH-7')
+              ON CONFLICT (vin) DO NOTHING;
+              ALTER SEQUENCE crm_vehicles_id_seq RESTART WITH 3;

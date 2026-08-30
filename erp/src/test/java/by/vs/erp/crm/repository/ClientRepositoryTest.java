@@ -22,7 +22,9 @@ class ClientRepositoryTest extends BaseIntegrationTest {
         Client client = new Client();
         client.setFirstName("Иван");
         client.setLastName("Иванов");
+        client.setPassword("123hadui9");
         client.setPhone("+375291112233");
+        client.setRole("CLIENT");
 
         Client savedClient = clientRepository.save(client);
 
@@ -40,6 +42,8 @@ class ClientRepositoryTest extends BaseIntegrationTest {
         client.setFirstName("Петр");
         client.setLastName("Петров");
         client.setPhone("+375294445566");
+        client.setRole("CLIENT");
+        client.setPassword("123hadui9");
         clientRepository.save(client);
 
         Optional<Client> foundClient = clientRepository.findByPhone("+375294445566");
@@ -55,11 +59,15 @@ class ClientRepositoryTest extends BaseIntegrationTest {
         client1.setFirstName("Иван");
         client1.setLastName("Иванов");
         client1.setPhone("+375297778899");
+        client1.setPassword("123hadui9");
+        client1.setRole("CLIENT");
         clientRepository.saveAndFlush(client1); // Сохраняем и принудительно отправляем в БД
 
         Client client2 = new Client();
         client2.setFirstName("Алексей");
         client2.setLastName("Сидоров");
+        client2.setPassword("123hadui9");
+        client2.setRole("CLIENT");
         client2.setPhone("+375297778899"); // Такой же телефон
 
         assertThrows(DataIntegrityViolationException.class, () -> {

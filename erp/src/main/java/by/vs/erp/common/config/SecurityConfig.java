@@ -20,8 +20,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.util.List;
 
@@ -54,7 +54,6 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
-
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
@@ -63,7 +62,7 @@ public class SecurityConfig {
                                 .jwtAuthenticationConverter(customJwtAuthenticationConverter())
                         )
                 )
-                .addFilterAfter(employeeActiveFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterAfter(employeeActiveFilter, BearerTokenAuthenticationFilter.class);
 
         return http.build();
     }
@@ -75,15 +74,18 @@ public class SecurityConfig {
 
     @Bean
     public Converter<Jwt, AbstractAuthenticationToken> customJwtAuthenticationConverter() {
-        return jwt -> {
-            String roleStr = jwt.getClaimAsString("role");
-            var authority = new SimpleGrantedAuthority("ROLE_" + roleStr);
+        return new Converter<Jwt, AbstractAuthenticationToken>() {
+            @Override
+            public AbstractAuthenticationToken convert(Jwt jwt) {
+                String roleStr = jwt.getClaimAsString("role");
+                var authority = new SimpleGrantedAuthority("ROLE_" + roleStr);
 
-            String userId = jwt.getClaimAsString("userId");
-            String username = jwt.getSubject();
-            UserPrincipal principal = new UserPrincipal(userId, username);
+                String userId = jwt.getClaimAsString("userId");
+                String username = jwt.getSubject();
+                UserPrincipal principal = new UserPrincipal(userId, username);
 
-            return new UsernamePasswordAuthenticationToken(principal, jwt, List.of(authority));
+                return new UsernamePasswordAuthenticationToken(principal, jwt, List.of(authority));
+            }
         };
     }
 }

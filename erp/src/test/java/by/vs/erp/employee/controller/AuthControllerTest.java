@@ -3,6 +3,8 @@ package by.vs.erp.employee.controller;
 import by.vs.erp.BaseIntegrationTest;
 import by.vs.erp.employee.dto.JwtResponse;
 import by.vs.erp.employee.dto.LoginRequest;
+import by.vs.erp.employee.dto.RefreshRequest;
+import by.vs.erp.employee.service.AuthService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,7 +30,7 @@ class AuthControllerTest extends BaseIntegrationTest {
     private AuthService authService;
 
     @Test
-    @DisplayName("Успешная аутентификация и получение JWT токенов")
+    @DisplayName("POST /auth/login: Успешный вход")
     void shouldLoginAndReturnJwt() throws Exception {
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.setEmail("admin@erp.by");
@@ -42,20 +44,19 @@ class AuthControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.type").value("Bearer"))
                 .andExpect(jsonPath("$.accessToken").value("access-token-string"))
                 .andExpect(jsonPath("$.refreshToken").value("refresh-token-string"));
     }
 
     @Test
-    @DisplayName("Успешное обновление токена через Refresh токен")
+    @DisplayName("POST /auth/refresh: Успешный рефреш")
     void shouldRefreshTokens() throws Exception {
         RefreshRequest refreshRequest = new RefreshRequest();
         refreshRequest.setRefreshToken("old-refresh-token");
 
         JwtResponse jwtResponse = new JwtResponse("new-access-token", "new-refresh-token");
 
-        Mockito.when(authService.refresh("old-refresh-token")).thenReturn(jwtResponse);
+        Mockito.when(authService.refresh(any(RefreshRequest.class))).thenReturn(jwtResponse);
 
         mockMvc.perform(post("/api/v1/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)

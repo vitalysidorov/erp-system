@@ -1,5 +1,6 @@
 package by.vs.erp.inventory.service;
 
+import by.vs.erp.common.exception.NotFoundException;
 import by.vs.erp.inventory.dto.PartCatalogReadDto;
 import by.vs.erp.inventory.mapper.PartCatalogMapper;
 import by.vs.erp.inventory.repository.PartCatalogRepository;
@@ -23,6 +24,6 @@ public class PartCatalogService {
     @Transactional(readOnly = true)
     public Optional<PartCatalogReadDto> findByOemNumber(String oemNumber) {
         return Optional.of(partCatalogMapper.toDto(partCatalogRepository.findByOemNumber(oemNumber)
-                .orElseThrow(() -> new IllegalArgumentException("Деталь с артикулом " + oemNumber + " не найдена"))));
+                .orElseThrow(() -> new NotFoundException("Деталь с артикулом " + oemNumber + " не найдена"))));
     }
 }

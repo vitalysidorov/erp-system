@@ -1,5 +1,6 @@
 package by.vs.erp.order.service;
 
+import by.vs.erp.common.exception.NotFoundException;
 import by.vs.erp.crm.entity.Client;
 import by.vs.erp.crm.entity.Vehicle;
 import by.vs.erp.crm.repository.ClientRepository;
@@ -18,8 +19,11 @@ import by.vs.erp.order.repository.WorkOrderRepository;
 import by.vs.erp.order.repository.WorkOrderStatusLogRepository;
 import by.vs.erp.employee.entity.Employee;
 import by.vs.erp.employee.repository.EmployeeRepository;
+import by.vs.erp.inventory.config.RabbitMQConfig;
+import by.vs.erp.inventory.event.StockDeficiencyEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.jpa.repository.Lock;
@@ -45,6 +49,7 @@ public class WorkOrderService {
     private final StockRepository stockRepository;
     private final CarClassRepository carClassRepository;
     private final PartBatchRepository partBatchRepository;
+    private final RabbitTemplate rabbitTemplate;
 
     @Value("${spring.application.inventory.min-limit}")
     private Integer minLimit;
@@ -54,7 +59,7 @@ public class WorkOrderService {
         log.info("Запуск процедуры закрытия заказ-наряда №{}", orderId);
 
         WorkOrder order = workOrderRepository.findByIdWithDetails(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Заказ-наряд не найден"));
+                .orElseThrow(() -> new NotFoundException("Заказ-наряд не найден"));
 
         if ("CLOSED".equals(order.getStatus())) {
             throw new IllegalStateException("Этот заказ-наряд уже закрыт.");
@@ -68,15 +73,25 @@ public class WorkOrderService {
                 throw new IllegalStateException("Недостаточно деталей на складе: " + item.getPart().getName());
             }
 
-            // уменьшаем остаток на складе
             int newQuantity = stock.getQuantity() - item.getQuantity();
             stock.setQuantity(newQuantity);
             stockRepository.save(stock);
 
-            // проверка на падение ниже минимального лимита
             if (newQuantity <= minLimit) {
                 log.warn("Деталь '{}' (OEM: {}) требует автозаказа. Осталось: {}",
                         item.getPart().getName(), item.getPart().getOemNumber(), newQuantity);
+
+                rabbitTemplate.convertAndSend(
+                        RabbitMQConfig.STOCK_DEFICIENCY_EXCHANGE,
+                        RabbitMQConfig.STOCK_DEFICIENCY_ROUTING_KEY,
+                        new StockDeficiencyEvent(
+                                item.getPart().getId(),
+                                item.getPart().getOemNumber(),
+                                item.getPart().getName(),
+                                newQuantity,
+                                minLimit
+                        )
+                );
             }
         });
 
@@ -129,7 +144,7 @@ public class WorkOrderService {
         }
 
         Employee master = employeeRepository.findById(dto.getMasterId())
-                .orElseThrow(() -> new IllegalArgumentException("Мастер-приемщик с ID " + dto.getMasterId() + " не найден"));
+                .orElseThrow(() -> new NotFoundException("Мастер-приемщик с ID " + dto.getMasterId() + " не найден"));
 
         // инициализация и сохранение самого заказ-наряда
         WorkOrder order = new WorkOrder();
@@ -158,7 +173,7 @@ public class WorkOrderService {
     @Transactional
     public void changeOrderStatus(Long orderId, String newStatus, Employee employee) {
         WorkOrder order = workOrderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Заказ не найден"));
+                .orElseThrow(() -> new NotFoundException("Заказ не найден"));
 
         String oldStatus = order.getStatus();
         order.setStatus(newStatus);
@@ -176,7 +191,7 @@ public class WorkOrderService {
     @Transactional
     public void addServiceToOrder(Long orderId, ServiceCatalog service, Employee mechanic) {
         WorkOrder order = workOrderRepository.findByIdWithDetails(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Заказ не найден"));
+                .orElseThrow(() -> new NotFoundException("Заказ не найден"));
 
         BigDecimal coefficient = carClassRepository.findByBrand(order.getVehicle().getMake())
                 .map(CarClass::getPriceCoefficient)

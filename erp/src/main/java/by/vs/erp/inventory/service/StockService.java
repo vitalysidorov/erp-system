@@ -1,5 +1,6 @@
 package by.vs.erp.inventory.service;
 
+import by.vs.erp.common.exception.NotFoundException;
 import by.vs.erp.inventory.dto.StockDto;
 import by.vs.erp.inventory.mapper.StockMapper;
 import by.vs.erp.inventory.repository.StockRepository;
@@ -31,7 +32,7 @@ public class StockService {
     @Transactional(readOnly = true)
     public Optional<StockDto> findByPartId(Long partId) {
         return Optional.of(stockMapper.toDto(stockRepository.findByPartId(partId)
-                .orElseThrow(() -> new IllegalArgumentException("Позиция детали с id: " + partId + " не найдена на складе"))));
+                .orElseThrow(() -> new NotFoundException("Позиция детали с id: " + partId + " не найдена на складе"))));
     }
 
     @Transactional(readOnly = true)

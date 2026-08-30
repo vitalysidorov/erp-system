@@ -25,26 +25,21 @@ public class EmployeeActiveFilter extends OncePerRequestFilter {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        // Если Spring Security уже успешно распарсил JWT и сохранил его в контексте
         if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
             String role = jwt.getClaimAsString("role");
-            String email = jwt.getSubject(); // Email сотрудника, который зашит в subject токена
+            String email = jwt.getSubject();
 
-            // Проверяем флаг активности ТОЛЬКО для работников и администраторов
             if (role != null && (role.equalsIgnoreCase("EMPLOYEE") || role.equalsIgnoreCase("ADMIN"))) {
                 boolean isActive = employeeRepository.findIsActiveByEmail(email).orElse(false);
 
                 if (!isActive) {
-                    // Если сотрудник деактивирован (уволен), принудительно возвращаем 403 JSON
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     response.setContentType("application/json; charset=UTF-8");
                     response.getWriter().write("{\"error\": \"Аккаунт сотрудника деактивирован. Доступ заблокирован.\"}");
-                    return; // Прерываем выполнение запроса, до контроллера он не дойдет
+                    return;
                 }
             }
         }
-
-        // Если это клиент или активный сотрудник — пропускаем запрос дальше к контроллеру
         filterChain.doFilter(request, response);
     }
 }

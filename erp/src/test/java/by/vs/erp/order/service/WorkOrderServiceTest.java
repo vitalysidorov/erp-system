@@ -27,6 +27,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -52,6 +53,7 @@ class WorkOrderServiceTest {
     @Mock private WorkOrderMapper workOrderMapper;
     @Mock private CarClassRepository carClassRepository;
     @Mock private PartBatchRepository partBatchRepository;
+    @Mock private RabbitTemplate rabbitTemplate; // новая зависимость: уведомление о дефиците склада
 
     @InjectMocks
     private WorkOrderService workOrderService;
@@ -103,6 +105,8 @@ class WorkOrderServiceTest {
         assertNull(savedLog.getFromStatus());
         assertEquals("OPENED", savedLog.getToStatus());
         assertEquals(master, savedLog.getChangedBy());
+
+        verifyNoInteractions(rabbitTemplate);
     }
 
     @Test
@@ -137,14 +141,55 @@ class WorkOrderServiceTest {
         WorkOrderResponseDto result = workOrderService.closeWorkOrder(orderId);
 
         assertNotNull(result);
-        assertEquals("CLOSED", order.getStatus(), "Статус документа должен измениться на CLOSED");
+        assertEquals("CLOSED", order.getStatus());
         assertNotNull(order.getClosedAt());
-        assertEquals(8, stock.getQuantity(), "На складе должно остаться 10 - 2 = 8 штук");
+        // 10 - 2 = 8, что выше minLimit(5) → уведомление о дефиците НЕ должно уйти
+        assertEquals(8, stock.getQuantity());
 
         verify(stockRepository, times(1)).save(stock);
         verify(workOrderRepository, times(1)).save(order);
-
         verify(eventPublisher, times(1)).publishEvent(any(ClosedWorkOrderEvent.class));
+        verifyNoInteractions(rabbitTemplate);
+    }
+
+    @Test
+    @DisplayName("closeWorkOrder: При падении остатка ниже минимального лимита публикуется событие дефицита в RabbitMQ")
+    void shouldPublishDeficiencyEventWhenStockFallsBelowMinLimit() {
+        Long orderId = 200L;
+
+        PartCatalog part = new PartCatalog();
+        part.setId(20L);
+        part.setName("Фильтр масляный");
+        part.setOemNumber("W71294");
+
+        OrderPartItem partItem = new OrderPartItem();
+        partItem.setPart(part);
+        partItem.setQuantity(6);
+
+        WorkOrder order = new WorkOrder();
+        order.setId(orderId);
+        order.setStatus("IN_PROGRESS");
+        order.setParts(List.of(partItem));
+
+        Stock stock = new Stock();
+        stock.setPart(part);
+        stock.setQuantity(8); // 8 - 6 = 2, что <= minLimit(5)
+
+        WorkOrderResponseDto responseDto = new WorkOrderResponseDto();
+        responseDto.setTotalAmount(BigDecimal.TEN);
+
+        when(workOrderRepository.findByIdWithDetails(orderId)).thenReturn(Optional.of(order));
+        when(stockRepository.findByPartId(20L)).thenReturn(Optional.of(stock));
+        when(workOrderMapper.toResponseDto(order)).thenReturn(responseDto);
+
+        workOrderService.closeWorkOrder(orderId);
+
+        assertEquals(2, stock.getQuantity());
+        verify(rabbitTemplate, times(1)).convertAndSend(
+                eq("erp.inventory.exchange"),
+                eq("stock.deficiency"),
+                any(Object.class)
+        );
     }
 
     @Test
@@ -177,13 +222,14 @@ class WorkOrderServiceTest {
         );
 
         assertTrue(exception.getMessage().contains("Недостаточно деталей на складе"));
-        assertEquals("IN_PROGRESS", order.getStatus(), "Статус заказа не должен измениться при ошибке");
+        assertEquals("IN_PROGRESS", order.getStatus());
         verify(workOrderRepository, never()).save(order);
         verify(eventPublisher, never()).publishEvent(any());
+        verifyNoInteractions(rabbitTemplate);
     }
 
     @Test
-    @DisplayName("addServiceToOrder: Успешное добавление услуги с расчетом цены с коэффициентом класса авто")
+    @DisplayName("addServiceToOrder: Успешное добавление услуги с расчётом цены с коэффициентом класса авто")
     void shouldAddServiceToOrderWithCarClassCoefficient() {
         Long orderId = 1L;
 
@@ -216,8 +262,7 @@ class WorkOrderServiceTest {
         assertEquals(1, order.getServices().size());
 
         BigDecimal expectedPrice = new BigDecimal("375.0000");
-        assertEquals(0, expectedPrice.compareTo(order.getServices().get(0).getFinalPrice()),
-                "Финальная цена должна быть рассчитана как 100 * 2.5 * 1.5 = 375.00");
+        assertEquals(0, expectedPrice.compareTo(order.getServices().get(0).getFinalPrice()));
     }
 
     @Test

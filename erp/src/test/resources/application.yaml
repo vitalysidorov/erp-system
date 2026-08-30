@@ -1,51 +1,82 @@
 spring:
   application:
     name: erp-test
-
     inventory:
       default-markup: ${INVENTORY_DEFAULT_MARKUP:1.3}
       min-limit: ${INVENTORY_MIN_LIMIT:5}
 
+  # 1. Переопределяем кастомную Master/Replica конфигурацию базы данных для тестов
+  infrastructure:
+    datasource:
+      master:
+        url: ${TEST_DB_URL:jdbc:postgresql://localhost:5434/postgres}
+        username: ${TEST_DB_USERNAME:postgres}
+        password: ${TEST_DB_PASSWORD:root}
+      replica:
+        url: ${TEST_DB_URL:jdbc:postgresql://localhost:5434/postgres} # В тестах реплика смотрит туда же
+        username: ${TEST_DB_USERNAME:postgres}
+        password: ${TEST_DB_PASSWORD:root}
+
+  elasticsearch:
+    uris: http://localhost:9201
+    username: elastic
+    password: ${ELASTIC_TEST_PASSWORD:test_password}
+
+  # Дополнительные настройки пула для тестов (чтобы тесты не съедали соединения)
   datasource:
-    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5432/erp_test_db}
-    username: ${TEST_DB_USERNAME:postgres}
-    password: ${TEST_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 5
 
-  liquibase:
-    change-log: classpath:db/changelog/db.changelog-master.yaml
-    enabled: true
-
-  cache:
-    type: ${TEST_CACHE_TYPE:none}
-    redis:
-      time-to-live: ${CACHE_TTL:3600000}
-
-  data:
-    redis:
-      repositories:
-        enabled: false
-
+  # 2. Настройки Hibernate для тестов (автоматически создаем и чистим таблицы в тестовой БД)
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: create-drop
     show-sql: false
 
-  elasticsearch:
-    uris: ${ELASTIC_URIS:http://localhost:9201}
-    username: ${ELASTIC_USERNAME:elastic}
-    password: ${ELASTIC_PASSWORD}
-    connection-timeout: 5s
-    socket-timeout: 30s
+  # Если вы хотите прогнать Liquibase миграции на тестовой БД, поставьте true
+  liquibase:
+    enabled: false
 
+  # 3. Полностью отключаем автозапуск RabbitMQ слушателей в тестах
+  rabbitmq:
+    listener:
+      direct:
+        auto-startup: false
+      simple:
+        auto-startup: false
+
+  # 4. Отключаем Redis Sentinel, шифрование SSL и работу репозиториев Redis в тестах
+  cache:
+    type: none # Отключает кэширование через Redis для изоляции тестов
+  data:
+    redis:
+      repositories:
+        enabled: false
+    elasticsearch:
+      repositories:
+        enabled: false
+
+  # 5. Глобальное отключение автоконфигураций инфраструктурных клиентов
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+# 6. Задаем заглушки для секретов JWT (иначе контекст Spring Security упадет при старте)
 jwt:
-  access-secret: ${JWT_ACCESS_SECRET}
-  refresh-secret: ${JWT_REFRESH_SECRET}
-  access-expiration: ${JWT_ACCESS_EXPIRATION:900000}
-  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+  access-secret: "test_secret_key_test_secret_key_test_secret_key_at_least_256_bits"
+  refresh-secret: "test_refresh_key_test_refresh_key_test_refresh_key_at_least_256_bits"
+  access-expiration: 60000
+  refresh-expiration: 600000
 
+# 7. Запускаем тесты на случайном свободном порту, чтобы избежать конфликтов "Port already in use"
 server:
   port: 0
+
+# Отключаем лишние логи в процессе тестирования
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO

@@ -2,11 +2,13 @@ package by.vs.erp.common.config;
 
 import by.vs.erp.common.database.DataSourceType;
 import by.vs.erp.common.database.RoutingDataSource;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import com.zaxxer.hikari.HikariDataSource;
+
 import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Map;
@@ -40,8 +42,14 @@ public class DataSourceConfig {
     }
 
     @Bean
+    @ConfigurationProperties(prefix = "spring.datasource.hikari")
+    public HikariConfig hikariConfigTemplate() {
+        return new HikariConfig();
+    }
+
+    @Bean
     @Primary
-    public DataSource dataSource() {
+    public DataSource dataSource(HikariConfig hikariConfigTemplate) {
         DataSourceProperties masterProps = masterProperties();
         DataSourceProperties replicaProps = replicaProperties();
 
@@ -49,19 +57,8 @@ public class DataSourceConfig {
             throw new IllegalStateException("CRITICAL ERROR: URL is null. Master properties map test failed!");
         }
 
-        System.out.println("=== CONFIGURING HIKARI DATA SOURCES ===");
-        System.out.println("Connecting to Master URL: " + masterProps.getUrl());
-        System.out.println("Connecting to Replica URL: " + replicaProps.getUrl());
-
-        HikariDataSource masterDS = new HikariDataSource();
-        masterDS.setJdbcUrl(masterProps.getUrl());
-        masterDS.setUsername(masterProps.getUsername());
-        masterDS.setPassword(masterProps.getPassword());
-
-        HikariDataSource replicaDS = new HikariDataSource();
-        replicaDS.setJdbcUrl(replicaProps.getUrl());
-        replicaDS.setUsername(replicaProps.getUsername());
-        replicaDS.setPassword(replicaProps.getPassword());
+        HikariDataSource masterDS = buildPool(hikariConfigTemplate, masterProps, "erp-master-pool");
+        HikariDataSource replicaDS = buildPool(hikariConfigTemplate, replicaProps, "erp-replica-pool");
 
         RoutingDataSource routingDataSource = new RoutingDataSource();
         Map<Object, Object> targetDataSources = new HashMap<>();
@@ -72,5 +69,15 @@ public class DataSourceConfig {
         routingDataSource.setDefaultTargetDataSource(masterDS);
 
         return routingDataSource;
+    }
+
+    private HikariDataSource buildPool(HikariConfig template, DataSourceProperties props, String poolName) {
+        HikariConfig config = new HikariConfig();
+        template.copyStateTo(config);
+        config.setJdbcUrl(props.getUrl());
+        config.setUsername(props.getUsername());
+        config.setPassword(props.getPassword());
+        config.setPoolName(poolName);
+        return new HikariDataSource(config);
     }
 }

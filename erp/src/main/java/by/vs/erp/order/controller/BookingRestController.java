@@ -3,8 +3,6 @@ package by.vs.erp.order.controller;
 import by.vs.erp.order.dto.BookingRequestDto;
 import by.vs.erp.order.dto.BookingResponseDto;
 import by.vs.erp.order.dto.TimeSlotDto;
-import by.vs.erp.order.entity.Booking;
-import by.vs.erp.order.repository.BookingRepository;
 import by.vs.erp.order.service.BookingService;
 import by.vs.erp.order.service.SmartBookingService;
 import jakarta.validation.Valid;
@@ -24,14 +22,20 @@ import java.util.List;
 public class BookingRestController {
 
     private final BookingService bookingService;
-    private final BookingRepository bookingRepository;
     private final SmartBookingService smartBookingService;
 
     @PostMapping
-    @PreAuthorize("hasRole('MANAGER') or (hasRole('CLIENT'))")
+    @PreAuthorize("hasRole('MANAGER') or (hasRole('CLIENT') and @bookingSecurityService.isVehicleOwner(#dto.vehicleId, authentication))")
     public ResponseEntity<BookingResponseDto> createBooking(@Valid @RequestBody BookingRequestDto dto) {
         BookingResponseDto created = bookingService.createBooking(dto);
         return new ResponseEntity<>(created, HttpStatus.CREATED);
+    }
+
+    @PatchMapping("/{id}/cancel")
+    @PreAuthorize("hasRole('MANAGER') or (hasRole('CLIENT') and @bookingSecurityService.isBookingOwner(#id, authentication))")
+    public ResponseEntity<Void> cancelBooking(@PathVariable Long id) {
+        bookingService.cancelBooking(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/suggest-slots")
@@ -41,16 +45,4 @@ public class BookingRestController {
             @RequestParam int durationHours) {
         return ResponseEntity.ok(smartBookingService.findAvailableSlots(date, durationHours));
     }
-
-    @PatchMapping("/{id}/cancel")
-    @PreAuthorize("hasRole('MANAGER') or (hasRole('CLIENT'))")
-    public ResponseEntity<Void> cancelBooking(@PathVariable Long id) {
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Бронь не найдена"));
-        booking.setStatus("CANCELLED");
-        bookingRepository.save(booking);
-        return ResponseEntity.noContent().build();
-    }
 }
-
-

@@ -1,5 +1,7 @@
 package by.vs.erp.employee.service;
 
+import by.vs.erp.common.exception.ConflictException;
+import by.vs.erp.common.exception.NotFoundException;
 import by.vs.erp.employee.dto.EmployeeRegisterRequest;
 import by.vs.erp.employee.dto.EmployeeResponseDto;
 import by.vs.erp.employee.entity.Employee;
@@ -26,7 +28,7 @@ public class EmployeeService {
 
         if (employeeRepository.existsByEmail(request.getEmail())) {
             log.warn("Регистрация отклонена: email {} уже занят", request.getEmail());
-            throw new IllegalArgumentException("Сотрудник с таким email уже зарегистрирован");
+            throw new ConflictException("Сотрудник с таким email уже зарегистрирован");
         }
 
         Employee employee = new Employee();
@@ -60,7 +62,7 @@ public class EmployeeService {
     public void dismissEmployee(Long id) {
         log.info("Сервис: Увольнение сотрудника с ID: {}", id);
         Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Сотрудник не найден"));
+                .orElseThrow(() -> new NotFoundException("Сотрудник не найден"));
         employee.setIsActive(false);
         employee.setRefreshToken(null);
         employeeRepository.save(employee);
@@ -70,10 +72,10 @@ public class EmployeeService {
     public void updateEmail(Long id, String newEmail) {
         log.info("Сервис: Смена email для сотрудника ID: {} на {}", id, newEmail);
         if (employeeRepository.existsByEmail(newEmail)) {
-            throw new IllegalStateException("Сотрудник с таким email уже зарегистрирован в системе");
+            throw new ConflictException("Сотрудник с таким email уже зарегистрирован в системе");
         }
         Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Сотрудник не найден"));
+                .orElseThrow(() -> new NotFoundException("Сотрудник не найден"));
         employee.setEmail(newEmail);
         employeeRepository.save(employee);
     }
@@ -82,7 +84,7 @@ public class EmployeeService {
     public void resetPassword(Long id, String newPassword) {
         log.info("Сервис: Административный сброс пароля для сотрудника ID: {}", id);
         Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Сотрудник не найден"));
+                .orElseThrow(() -> new NotFoundException("Сотрудник не найден"));
         employee.setPassword(passwordEncoder.encode(newPassword));
         employee.setRefreshToken(null); // инвалидируем текущую сессию безопасности
         employeeRepository.save(employee);
@@ -92,7 +94,7 @@ public class EmployeeService {
     public void updateSalaryRate(Long id, java.math.BigDecimal newRate) {
         log.info("Сервис: Изменение процентной ставки сотрудника ID: {} на {}%", id, newRate);
         Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Сотрудник не найден"));
+                .orElseThrow(() -> new NotFoundException("Сотрудник не найден"));
         employee.setSalaryRatePercent(newRate);
         employeeRepository.save(employee);
     }
@@ -107,7 +109,7 @@ public class EmployeeService {
     public EmployeeResponseDto findByEmail(String email) {
         return employeeRepository.findByEmail(email)
                 .map(this::convertToDto)
-                .orElseThrow(() -> new IllegalArgumentException("Сотрудник с таким email не найден"));
+                .orElseThrow(() -> new NotFoundException("Сотрудник с таким email не найден"));
     }
 
     @Transactional(readOnly = true)

@@ -32,7 +32,7 @@ public class Client {
     private String firstName;
 
     @Column(nullable = false, length = 30)
-    private String role;
+    private String role = "CLIENT";
 
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Vehicle> vehicles = new ArrayList<>();

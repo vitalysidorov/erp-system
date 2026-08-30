@@ -63,23 +63,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleNotFoundExceptions(IllegalArgumentException ex,
-                                                                  HttpServletRequest request) {
-        log.error("Ресурс не найден: {}", ex.getMessage());
-
-        ErrorResponse errorResponse = new ErrorResponse(
-                LocalDateTime.now(),
-                HttpStatus.NOT_FOUND.value(),
-                HttpStatus.NOT_FOUND.getReasonPhrase(),
-                ex.getMessage(),
-                request.getRequestURI(),
-                null
-        );
-
-        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
-    }
-
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalExceptions(Exception ex,
                                                                 HttpServletRequest request) {
@@ -141,6 +124,39 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Object> handleTypeMismatchException(MethodArgumentTypeMismatchException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body("Неверный формат параметра: " + ex.getName());
+    }
+
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFound(NotFoundException ex, HttpServletRequest request) {
+        log.warn("Ресурс не найден: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(), HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(), ex.getMessage(),
+                request.getRequestURI(), null
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex, HttpServletRequest request) {
+        log.warn("Конфликт бизнес-состояния: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(), HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.getReasonPhrase(), ex.getMessage(),
+                request.getRequestURI(), null
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleBadRequest(IllegalArgumentException ex, HttpServletRequest request) {
+        log.warn("Некорректный запрос: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(), HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(), ex.getMessage(),
+                request.getRequestURI(), null
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 }
 

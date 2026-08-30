@@ -1,5 +1,6 @@
 package by.vs.erp.crm.service;
 
+import by.vs.erp.common.exception.ConflictException;
 import by.vs.erp.crm.dto.ClientDto;
 import by.vs.erp.crm.dto.ClientReadDto;
 import by.vs.erp.crm.dto.ClientRegisterRequest;
@@ -29,18 +30,18 @@ public class ClientService {
     @Transactional
     public ClientReadDto registerNewClient(ClientRegisterRequest request) {
         if (clientRepository.existsByPhone(request.getPhone())) {
-            throw new IllegalArgumentException("Клиент с таким номером телефона уже зарегистрирован");
+            throw new ConflictException("Клиент с таким номером телефона уже зарегистрирован");
         }
 
         Client client = new Client();
         client.setPhone(request.getPhone());
-        client.setFirstName(request.getFirstName());
         client.setLastName(request.getLastName());
-        client.setRole("CLIENT"); // Роль проставляется автоматически на бэкенде!
+        client.setFirstName(request.getFirstName());
+        client.setRole("CLIENT");
         client.setPassword(passwordEncoder.encode(request.getPassword()));
 
         Client saved = clientRepository.save(client);
-        return new ClientReadDto(saved.getId(), saved.getPhone(), saved.getFirstName(), saved.getLastName());
+        return new ClientReadDto(saved.getId(), saved.getPhone(), saved.getLastName(), saved.getFirstName());
     }
 
     @Transactional

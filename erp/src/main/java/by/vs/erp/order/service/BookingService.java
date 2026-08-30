@@ -1,5 +1,6 @@
 package by.vs.erp.order.service;
 
+import by.vs.erp.common.exception.NotFoundException;
 import by.vs.erp.common.security.UserPrincipal;
 import by.vs.erp.order.dto.BookingRequestDto;
 import by.vs.erp.order.dto.BookingResponseDto;
@@ -33,11 +34,18 @@ public class BookingService {
         throw new IllegalStateException("Пользователь не аутентифицирован");
     }
 
+    private boolean isManagerOrAdmin() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getAuthorities() == null) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MANAGER".equals(a.getAuthority()) || "ROLE_ADMIN".equals(a.getAuthority()));
+    }
+
     @Transactional
     public BookingResponseDto createBooking(BookingRequestDto dto) {
-        log.info("Попытка создания брони для автомобиля ID: {}. Источник: {}, Автор: {}",
-                dto.getVehicleId(), dto.getSource(), dto.getCreatedBy());
-
+        log.info("Попытка создания брони для автомобиля ID: {}", dto.getVehicleId());
 
         List<Booking> overlapping = bookingRepository.findOverlappingBookingsWithLock(
                 dto.getVehicleId(), dto.getStartTime(), dto.getEndTime()
@@ -50,14 +58,18 @@ public class BookingService {
 
         Booking booking = bookingMapper.toEntity(dto);
 
-        if (booking.getCreatedBy() == null) {
-            booking.setCreatedBy(getCurrentUserId());
-            booking.setSource("MANUAL");
-        }
-
+        booking.setCreatedBy(getCurrentUserId());
+        booking.setSource(isManagerOrAdmin() ? "MANUAL" : "BFF_WEB");
         booking.setStatus("CONFIRMED");
 
         return bookingMapper.toDto(bookingRepository.save(booking));
     }
-}
 
+    @Transactional
+    public void cancelBooking(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new NotFoundException("Бронь не найдена"));
+        booking.setStatus("CANCELLED");
+        bookingRepository.save(booking);
+    }
+}

@@ -26,6 +26,8 @@ class VehicleRepositoryTest extends BaseIntegrationTest {
         client.setFirstName("Сергей");
         client.setLastName("Сергеев");
         client.setPhone("+375299990011");
+        client.setPassword("123hadui9");
+        client.setRole("CLIENT");
         Client savedClient = clientRepository.save(client);
 
         Vehicle vehicle = new Vehicle();
@@ -48,6 +50,8 @@ class VehicleRepositoryTest extends BaseIntegrationTest {
         client.setFirstName("Ольга");
         client.setLastName("Ольгина");
         client.setPhone("+375299990022");
+        client.setPassword("123hadui9");
+        client.setRole("CLIENT");
         Client savedClient = clientRepository.save(client);
 
         String targetVin = "1234567890ABCDEF2";
@@ -71,6 +75,8 @@ class VehicleRepositoryTest extends BaseIntegrationTest {
         client.setFirstName("Дмитрий");
         client.setLastName("Дмитриев");
         client.setPhone("+375299990033");
+        client.setPassword("123hadui9");
+        client.setRole("CLIENT");
 
         Vehicle vehicle = new Vehicle();
         vehicle.setClient(client);

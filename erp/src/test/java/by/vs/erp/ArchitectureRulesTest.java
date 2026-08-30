@@ -32,7 +32,8 @@ class ArchitectureRulesTest {
 
         classes()
                 .that().resideInAPackage("..repository..")
-                .should().onlyBeAccessed().byAnyPackage("..service..", "..controller..", "..listener..", "..repository..", "..config..")
+                .should().onlyBeAccessed().byAnyPackage("..service..", "..controller..", "..listener..",
+                        "..repository..", "..config..", "..security..")
                 .check(importedClasses);
 
         noClasses()

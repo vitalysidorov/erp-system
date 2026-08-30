@@ -1,5 +1,6 @@
 package by.vs.erp.crm.service;
 
+import by.vs.erp.common.exception.NotFoundException;
 import by.vs.erp.crm.dto.VehicleDto;
 import by.vs.erp.crm.dto.VehicleReadDto;
 import by.vs.erp.crm.entity.Client;
@@ -50,6 +51,8 @@ class VehicleServiceTest {
         Client client = new Client();
         client.setId(clientId);
         client.setVehicles(new ArrayList<>());
+        client.setPassword("123hadui9");
+        client.setRole("CLIENT");
 
         Vehicle vehicleEntity = new Vehicle();
         VehicleReadDto readDto = new VehicleReadDto(10L, "12345678901234567", "1", "Tesla", "Model S");
@@ -74,7 +77,7 @@ class VehicleServiceTest {
 
         when(clientRepository.findById(clientId)).thenReturn(Optional.empty());
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+        NotFoundException exception = assertThrows(NotFoundException.class, () ->
                 vehicleService.addVehicleToClient(clientId, dto)
         );
 
@@ -121,7 +124,7 @@ class VehicleServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         when(clientRepository.existsById(clientId)).thenReturn(false);
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+        NotFoundException exception = assertThrows(NotFoundException.class, () ->
                 vehicleService.getClientVehicles(clientId, pageable)
         );
 

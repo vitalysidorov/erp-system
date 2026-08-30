@@ -1,5 +1,6 @@
 package by.vs.erp.crm.service;
 
+import by.vs.erp.common.exception.NotFoundException;
 import by.vs.erp.crm.dto.VehicleDto;
 import by.vs.erp.crm.dto.VehicleReadDto;
 import by.vs.erp.crm.entity.Client;
@@ -31,7 +32,7 @@ public class VehicleService {
     public VehicleReadDto addVehicleToClient(Long clientId, VehicleDto vehicleDto) {
 
         Client client = clientRepository.findById(clientId)
-                .orElseThrow(() -> new IllegalArgumentException("Клиент с ID " + clientId + " не найден в базе CRM"));
+                .orElseThrow(() -> new NotFoundException("Клиент с ID " + clientId + " не найден в базе CRM"));
         client.getVehicles().add(vehicleMapper.toEntity(vehicleDto));
         Client savedClient = clientRepository.save(client);
 
@@ -48,7 +49,7 @@ public class VehicleService {
     @Transactional(readOnly = true)
     public Slice<VehicleReadDto> getClientVehicles(Long clientId, Pageable pageable) {
         if (!clientRepository.existsById(clientId))
-            throw new IllegalArgumentException("Клиент с ID " + clientId + " не существует");
+            throw new NotFoundException("Клиент с ID " + clientId + " не существует");
 
         return vehicleRepository.findByClientId(clientId, pageable).map(vehicleMapper::toDto);
     }

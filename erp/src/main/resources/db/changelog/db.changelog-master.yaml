@@ -9,3 +9,5 @@ databaseChangeLog:
       file: db/changelog/changeset/004-create-fifo-index.yaml
   - include:
       file: db/changelog/changeset/005-update-base-tables.yaml
+  - include:
+      file: db/changelog/changeset/006-insert-demo-data.yaml

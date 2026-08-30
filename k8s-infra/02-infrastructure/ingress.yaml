@@ -37,14 +37,6 @@ spec:
                 port:
                   number: 8085
 
-          - path: /oauth2/
-            pathType: Prefix
-            backend:
-              service:
-                name: erp
-                port:
-                  number: 8085
-
           - path: /bff/swagger-ui.html
             pathType: Prefix
             backend:

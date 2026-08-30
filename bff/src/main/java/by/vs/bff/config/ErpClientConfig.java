@@ -3,7 +3,6 @@ package by.vs.bff.config;
 import by.vs.bff.client.ErpClient;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -18,7 +17,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
-import javax.net.ssl.SSLException;
+import java.io.File;
 
 @Configuration
 @Slf4j
@@ -30,8 +29,13 @@ public class ErpClientConfig {
     @Value("${erp.server.port}")
     private String erpPort;
 
+    // путь к CA-сертификату внутреннего CA (mounted secret), если требуется доверять
+    // непубличному CA, если не задан — используется дефолтный JVM truststore.
+    @Value("${erp.server.ca-cert-path:#{null}}")
+    private String caCertPath;
+
     @Bean
-    public ErpClient erpClient() throws SSLException {
+    public ErpClient erpClient() throws Exception {
         String erpServiceUrl = UriComponentsBuilder.newInstance()
                 .scheme("https")
                 .host(erpHost)
@@ -39,9 +43,12 @@ public class ErpClientConfig {
                 .build()
                 .toUriString();
 
-        SslContext sslContext = SslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .build();
+        SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
+        if (caCertPath != null && !caCertPath.isBlank()) {
+            sslContextBuilder.trustManager(new File(caCertPath));
+        }
+
+        SslContext sslContext = sslContextBuilder.build();
 
         HttpClient httpClient = HttpClient.create()
                 .secure(sslSpec -> sslSpec.sslContext(sslContext));

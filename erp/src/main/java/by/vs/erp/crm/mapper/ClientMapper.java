@@ -11,6 +11,8 @@ public interface ClientMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "vehicles", ignore = true)
+    @Mapping(target = "refreshToken", ignore = true)
+    @Mapping(target = "role", ignore = true)
     Client toEntity(ClientDto clientDto);
 
     ClientReadDto toDto(Client client);

@@ -43,17 +43,20 @@ springdoc:
     path: /v3/api-docs
 
 management:
-  tracing:
-    sampling:
-      probability: 1.0
   endpoints:
     web:
       exposure:
-        include: health, metrics
+        include: health, metrics, prometheus
   endpoint:
     health:
+      show-details: always
       probes:
         enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
 
 logging:
   include-application-name: false
