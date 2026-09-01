@@ -1,4 +1,4 @@
 rootProject.name = 'my-erp-platform'
 
-include 'erp'
-include 'bff'
+includeBuild('bff')
+includeBuild('erp')

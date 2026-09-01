@@ -1,9 +1,9 @@
 package by.vs.bff.controller;
 
 import by.vs.bff.client.ErpClient;
-import by.vs.erp.employee.dto.JwtResponse;
-import by.vs.erp.employee.dto.LoginRequest;
-import by.vs.erp.employee.dto.RefreshRequest;
+import by.vs.bff.dto.JwtResponse;
+import by.vs.bff.dto.LoginRequest;
+import by.vs.bff.dto.RefreshRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

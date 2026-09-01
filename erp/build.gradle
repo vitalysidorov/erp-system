@@ -21,9 +21,15 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
+ext {
+    mapstructVersion = '1.5.5.Final'
+    jjwtVersion = '0.12.5'
+    testcontainersVersion = '1.20.1'
+}
 
-    implementation enforcedPlatform('org.springframework.boot:spring-boot-dependencies:3.3.2')
+dependencies {
+    implementation enforcedPlatform('org.springframework.boot:spring-boot-dependencies:3.3.4')
+
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
@@ -32,28 +38,30 @@ dependencies {
     implementation 'org.liquibase:liquibase-core'
     implementation 'org.springframework.boot:spring-boot-starter-amqp'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
-    implementation 'org.mapstruct:mapstruct:1.5.5.Final'
+    implementation "org.mapstruct:mapstruct:${mapstructVersion}"
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
+    implementation "io.jsonwebtoken:jjwt-api:${jjwtVersion}"
     implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 
-    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+    runtimeOnly "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"
+    runtimeOnly "io.jsonwebtoken:jjwt-jackson:${jjwtVersion}"
     runtimeOnly 'org.postgresql:postgresql'
 
-    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor enforcedPlatform('org.springframework.boot:spring-boot-dependencies:3.3.4')
     annotationProcessor 'org.projectlombok:lombok'
-    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
-    annotationProcessor platform('org.springframework.boot:spring-boot-dependencies:3.3.2')
-    annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
+    annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
+    annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.amqp:spring-rabbit-test'
     testImplementation "com.tngtech.archunit:archunit-junit5:1.3.0"
     testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
 
     testImplementation 'io.projectreactor:reactor-test'
     testRuntimeOnly 'org.postgresql:postgresql'
@@ -62,6 +70,4 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
-    systemProperty 'org.testcontainers.shaded.com.github.dockerjava.api.version', '1.45'
-    environment 'DOCKER_API_VERSION', '1.45'
 }

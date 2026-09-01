@@ -1,11 +1,6 @@
 package by.vs.bff.client;
 
-import by.vs.bff.dto.ClientBookingResponse;
-import by.vs.bff.dto.ErpBookingRequest;
-import by.vs.bff.dto.TimeSlotDto;
-import by.vs.erp.employee.dto.JwtResponse;
-import by.vs.erp.employee.dto.LoginRequest;
-import by.vs.erp.employee.dto.RefreshRequest;
+import by.vs.bff.dto.*;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
