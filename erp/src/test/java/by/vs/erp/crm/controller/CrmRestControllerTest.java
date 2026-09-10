@@ -36,7 +36,6 @@ class CrmRestControllerTest extends BaseIntegrationTest {
 
     @AfterEach
     void tearDown() {
-        // Очищаем таблицы строго в правильном порядке зависимостей foreign key
         vehicleRepository.deleteAll();
         clientRepository.deleteAll();
     }
@@ -45,7 +44,6 @@ class CrmRestControllerTest extends BaseIntegrationTest {
     @WithMockUser(roles = "MANAGER")
     @DisplayName("Сквозной интеграционный сценарий: создание клиента -> поиск -> добавление авто -> поиск авто -> получение списка")
     void shouldCreateClientAndThenAddVehicleAndSearchIt() throws Exception {
-        // 1. Создаем клиента через API (с учетом обновленного ClientDto с полем password)
         ClientDto clientDto = new ClientDto("+375291112233", "securePassword123", "Иванов", "Иван");
 
         String clientResponse = mockMvc.perform(post("/api/v1/crm/clients/create")
@@ -56,22 +54,16 @@ class CrmRestControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.phone").value("+375291112233"))
                 .andExpect(jsonPath("$.lastName").value("Иванов"))
                 .andExpect(jsonPath("$.firstName").value("Иван"))
-                // Пароль обычно не возвращается в ClientReadDto из соображений безопасности,
-                // поэтому проверяем только стандартные поля профиля.
                 .andReturn().getResponse().getContentAsString();
 
-        // Извлекаем сгенерированный базой данных ID нового клиента
         Long clientId = objectMapper.readTree(clientResponse).get("id").asLong();
 
-        // 2. Ищем этого же клиента по номеру телефона (Возвращается ClientReadDto)
         mockMvc.perform(get("/api/v1/crm/clients/search")
                         .param("phone", "+375291112233"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(clientId))
                 .andExpect(jsonPath("$.phone").value("+375291112233"));
 
-        // 3. Добавляем автомобиль к созданному клиенту (Валидируется VehicleDto)
-        // Строго 17 символов для выполнения условий @Size(min=17, max=17)
         String validVin = "1234567890ABCDEF1";
         VehicleDto vehicleDto = new VehicleDto(validVin, clientId, "Toyota", "Camry", "Без г-н");
 
@@ -84,7 +76,6 @@ class CrmRestControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.make").value("Toyota"))
                 .andExpect(jsonPath("$.model").value("Camry"));
 
-        // 4. Ищем автомобиль по VIN коду (Возвращается VehicleReadDto)
         mockMvc.perform(get("/api/v1/crm/vehicles/search")
                         .param("vin", validVin))
                 .andExpect(status().isOk())
@@ -92,12 +83,10 @@ class CrmRestControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.make").value("Toyota"))
                 .andExpect(jsonPath("$.model").value("Camry"));
 
-        // 5. Запрашиваем страницу (Slice) всех автомобилей конкретного клиента
         mockMvc.perform(get("/api/v1/crm/clients/{clientId}/vehicles", clientId)
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
-                // Проверяем структуру Slice: данные лежат внутри массива "content"
                 .andExpect(jsonPath("$.content", hasSize(1)))
                 .andExpect(jsonPath("$.content[0].vin").value(validVin))
                 .andExpect(jsonPath("$.content[0].model").value("Camry"));

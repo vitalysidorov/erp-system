@@ -4,11 +4,15 @@ metadata:
   name: erp-public-ingress
   namespace: default
   annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "5"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "10"
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - bff
+      secretName: erp-public-tls
   rules:
     - host: bff
       http:
@@ -29,7 +33,7 @@ spec:
                 port:
                   number: 8080
 
-          - path: /api/v1/auth/
+          - path: /api/v1/branches/active
             pathType: Prefix
             backend:
               service:
@@ -62,15 +66,49 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  name: erp-public-auth-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/limit-rps: "5"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "2"
+    nginx.ingress.kubernetes.io/limit-connections: "10"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - bff
+      secretName: erp-public-tls
+  rules:
+    - host: bff
+      http:
+        paths:
+          - path: /api/v1/auth/
+            pathType: Prefix
+            backend:
+              service:
+                name: erp
+                port:
+                  number: 8085
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
   name: erp-private-ingress
   namespace: default
   annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
     nginx.ingress.kubernetes.io/compute-full-forwarded-for: "true"
     nginx.ingress.kubernetes.io/whitelist-source-range: "127.0.0.1/32, 192.168.0.0/24, 10.0.0.0/8, 172.16.0.0/12"
+    nginx.ingress.kubernetes.io/proxy-real-ip-cidr: "10.0.0.0/8"
+  namespace: default
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - erp.local
+      secretName: erp-private-tls
   rules:
     - host: erp.local
       http:
@@ -118,6 +156,13 @@ spec:
                 port:
                   number: 8085
           - path: /api/v1/employees/
+            pathType: Prefix
+            backend:
+              service:
+                name: erp
+                port:
+                  number: 8085
+          - path: /api/v1/branches/
             pathType: Prefix
             backend:
               service:

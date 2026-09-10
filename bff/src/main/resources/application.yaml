@@ -23,7 +23,6 @@ spring:
       resourceserver:
         jwt:
           jws-algorithms: HS256
-
   data:
     redis:
       password: ${REDIS_PASSWORD:redis_password}

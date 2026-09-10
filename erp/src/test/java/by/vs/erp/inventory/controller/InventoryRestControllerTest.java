@@ -92,7 +92,6 @@ class InventoryRestControllerTest extends BaseIntegrationTest {
     @WithMockUser(roles = "MANAGER")
     @DisplayName("POST /batches: Успешное оформление новой поставки роли MANAGER")
     void shouldReceiveNewBatchWhenUserIsManager() throws Exception {
-        // Создаем тестовые данные (используем валидные значения для прохождения тестов)
         PartBatchDto inputDto = new PartBatchDto(100L, 50, 50, new BigDecimal("12.50"));
         PartBatchReadDto responseDto = new PartBatchReadDto(1L, 100L, 50, 50, new BigDecimal("12.50"), LocalDateTime.now());
 

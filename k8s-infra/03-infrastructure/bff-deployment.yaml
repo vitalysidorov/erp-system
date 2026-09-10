@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: bff
-          image: your-registry/bff:latest
+          image: your-registry/bff:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

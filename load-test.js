@@ -1,7 +1,7 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
-// Эмуляция реального наплыва пользователей
+// эмуляция реального наплыва пользователей
 export const options = {
     stages: [
         { duration: '30s', target: 20 },  // плавное увеличение до 20 виртуальных пользователей
@@ -10,14 +10,14 @@ export const options = {
         { duration: '20s', target: 0 },   // плавное отключение пользователей
     ],
     thresholds: {
-        http_req_failed: ['rate<0.05'], //    ошибок должно быть менее 5%
+        http_req_failed: ['rate<0.05'],    // ошибок должно быть менее 5%
         http_req_duration: ['p(95)<1500'], // 95% запросов должны выполняться быстрее 1.5 сек
     },
 };
 
 const BASE_URL = 'http://localhost:8080/bff/api/v1'; // Адрес шлюза BFF
 
-// Данные для авторизации тестового клиента (из тестовых данных)
+// данные для авторизации тестового клиента (из тестовых данных)
 const LOGIN_PAYLOAD = JSON.stringify({
     phone: '+375291112233',
     password: 'password'
@@ -25,9 +25,9 @@ const LOGIN_PAYLOAD = JSON.stringify({
 
 const HEADERS = { 'Content-Type': 'application/json' };
 
-// Инициализация сессии для каждого виртуального пользователя
+// инициализация сессии для каждого виртуального пользователя
 export function setup() {
-    // Делаем один запрос на авторизацию для получения JWT
+    // делаем один запрос на авторизацию для получения JWT
     const loginRes = http.post(`${BASE_URL}/b2c/auth/login`, LOGIN_PAYLOAD, { headers: HEADERS });
 
     const isLoginOk = check(loginRes, {
@@ -42,15 +42,15 @@ export function setup() {
     return { token: loginRes.json().accessToken };
 }
 
-// Основные запросы
+// основные запросы
 export default function (data) {
     const authHeaders = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${data.token}`
     };
 
-    // Проверка доступных слотов
-    // Формируем дату в формате ISO, запрашиваем длительность 2 часа
+    // проверка доступных слотов
+    // формируем дату в формате ISO, запрашиваем длительность 2 часа
     const slotsUrl = `${BASE_URL}/client/bookings/slots?date=2026-09-01&durationHours=2`;
     const slotsRes = http.get(slotsUrl, { headers: authHeaders });
 
@@ -61,7 +61,7 @@ export default function (data) {
 
     sleep(1);
 
-    // Попытка создания бронирования
+    // попытка создания бронирования
     const bookingPayload = JSON.stringify({
         vehicleId: 1,
         startTime: '2026-09-01T14:00:00',
@@ -70,8 +70,8 @@ export default function (data) {
 
     const bookingRes = http.post(`${BASE_URL}/client/bookings`, bookingPayload, { headers: authHeaders });
 
-    // При высокой конкуренции часть запросов вернет 200 (успех), а часть — 409/500 (время уже занято/Блокировка СУБД)
-    // Из-за Resilience4j RateLimiter на пике (100 VUs) также ожидаются ответы 429 Too Many Requests
+    // при высокой конкуренции часть запросов вернет 200 (успех), а часть — 409/500 (время уже занято/Блокировка СУБД)
+    // из-за Resilience4j RateLimiter на пике (100 VUs) также ожидаются ответы 429 Too Many Requests
     check(bookingRes, {
         'Booking handled without crashing': (r) => [200, 409, 429, 503].includes(r.status),
     });

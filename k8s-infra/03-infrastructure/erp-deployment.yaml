@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: erp
-          image: your-registry/erp:latest
+          image: your-registry/erp:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8085

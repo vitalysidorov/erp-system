@@ -27,7 +27,6 @@ public class MockInfrastructureConfig {
         RedisConnection connection = Mockito.mock(RedisConnection.class);
         RedisKeyCommands keyCommands = Mockito.mock(RedisKeyCommands.class);
 
-        // Обучаем моки возвращать друг друга по цепочке, чтобы spring-data-redis не падал по NPE
         Mockito.when(factory.getConnection()).thenReturn(connection);
         Mockito.when(connection.keyCommands()).thenReturn(keyCommands);
 
@@ -37,7 +36,6 @@ public class MockInfrastructureConfig {
     @Bean
     @Primary
     public CacheManager testCacheManager() {
-        // Этот менеджер перехватит аннотации @CacheEvict/@Cacheable и превратит их в безопасные пустышки
         return new NoOpCacheManager();
     }
 }

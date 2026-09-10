@@ -7,6 +7,10 @@ import java.lang.annotation.RetentionPolicy;
 @Retention(RetentionPolicy.RUNTIME)
 @WithSecurityContext(factory = WithMockJwtSecurityContextFactory.class)
 public @interface WithMockJwtClient {
-    String subject() default "client_12345";
+
+    String userId() default "user-12345";
+
+    String username() default "test_user";
+
     String role() default "CLIENT";
 }
