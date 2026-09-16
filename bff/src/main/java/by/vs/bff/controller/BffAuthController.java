@@ -1,9 +1,8 @@
 package by.vs.bff.controller;
 
 import by.vs.bff.client.ErpClient;
-import by.vs.bff.dto.JwtResponse;
+import by.vs.bff.dto.JwtResponseWithoutRefreshToken;
 import by.vs.bff.dto.LoginRequest;
-import by.vs.bff.dto.RefreshRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,15 +18,18 @@ public class BffAuthController {
     private final ErpClient erpClient;
 
     @PostMapping("/auth/login")
-    public Mono<ResponseEntity<JwtResponse>> login(@Valid @RequestBody LoginRequest request) {
-        return erpClient.loginInErp(request)
-                .map(jwtResponse -> ResponseEntity.ok(jwtResponse));
+    public Mono<ResponseEntity<JwtResponseWithoutRefreshToken>> login(@Valid @RequestBody LoginRequest request) {
+        return erpClient.loginInErp(request);
     }
 
     @PostMapping("/auth/refresh")
-    public Mono<ResponseEntity<JwtResponse>> refresh(@Valid @RequestBody RefreshRequest request) {
-        return erpClient.refreshInErp(request)
-                .map(jwtResponse -> ResponseEntity.ok(jwtResponse));
+    public Mono<ResponseEntity<JwtResponseWithoutRefreshToken>> refresh(@CookieValue(name = "refreshToken") String refreshToken) {
+        return erpClient.refreshInErp(refreshToken);
+    }
+
+    @PostMapping("/auth/logout")
+    public Mono<ResponseEntity<Void>> logout() {
+        return erpClient.logout();
     }
 
     @PostMapping("/clients/register")

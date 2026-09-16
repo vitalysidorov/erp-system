@@ -1,6 +1,8 @@
 package by.vs.bff.client;
 
 import by.vs.bff.dto.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,10 +18,13 @@ import java.util.List;
 public interface ErpClient {
 
     @PostExchange("/auth/login")
-    Mono<JwtResponse> loginInErp(@RequestBody LoginRequest loginRequest);
+    Mono<ResponseEntity<JwtResponseWithoutRefreshToken>> loginInErp(@RequestBody LoginRequest request);
 
     @PostExchange("/auth/refresh")
-    Mono<JwtResponse> refreshInErp(@RequestBody RefreshRequest refreshRequest);
+    Mono<ResponseEntity<JwtResponseWithoutRefreshToken>> refreshInErp(@CookieValue(name = "refreshToken") String refreshToken);
+
+    @PostExchange("/auth/logout")
+    Mono<ResponseEntity<Void>> logout();
 
     @PostExchange("/clients/register")
     Mono<Object> registerClientInErp(@RequestBody Object clientRegisterRequest);

@@ -2,9 +2,8 @@ package by.vs.bff.controller;
 
 import by.vs.bff.client.ErpClient;
 import by.vs.bff.config.SecurityConfig;
-import by.vs.bff.dto.JwtResponse;
+import by.vs.bff.dto.JwtResponseWithoutRefreshToken;
 import by.vs.bff.dto.LoginRequest;
-import by.vs.bff.dto.RefreshRequest;
 import by.vs.bff.dto.TimeSlotDto;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +12,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
@@ -41,24 +41,28 @@ class BffAuthControllerTest {
     @Test
     void login_ValidRequest_Returns200AndTokens() {
         LoginRequest request = new LoginRequest("test@mail.com", "password123");
-        JwtResponse erpResponse = new JwtResponse("access-token", "refresh-token");
+        JwtResponseWithoutRefreshToken erpResponse = new JwtResponseWithoutRefreshToken("access-token");
+        String mockCookieHeader = "refreshToken=new-refresh-token-value; Path=/; HttpOnly; Secure; Max-Age=259200";
 
-        when(erpClient.loginInErp(any(LoginRequest.class))).thenReturn(Mono.just(erpResponse));
+        when(erpClient.loginInErp(any(LoginRequest.class))).thenReturn(Mono.just(
+                ResponseEntity.ok()
+                        .header("Set-Cookie", mockCookieHeader)
+                        .body(erpResponse)
+        ));
 
         webTestClient.post()
                 .uri("/api/v1/b2c/auth/login")
+                .cookie("refreshToken", "old-refresh-token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.accessToken").isEqualTo("access-token")
-                .jsonPath("$.refreshToken").isEqualTo("refresh-token");
+                .jsonPath("$.accessToken").isEqualTo("access-token");
     }
 
     @Test
     void login_InvalidRequest_Returns400BadRequest() {
-        // Ошибка валидации: пустой email и пароль
         LoginRequest request = new LoginRequest("", "");
 
         webTestClient.post()
@@ -71,15 +75,20 @@ class BffAuthControllerTest {
 
     @Test
     void refresh_ValidRequest_Returns200() {
-        RefreshRequest request = new RefreshRequest("refresh-token-value");
-        JwtResponse erpResponse = new JwtResponse("new-access-token", "new-refresh-token");
+        var erpResponse = new JwtResponseWithoutRefreshToken("new-access-token");
 
-        when(erpClient.refreshInErp(any(RefreshRequest.class))).thenReturn(Mono.just(erpResponse));
+        String mockCookieHeader = "refreshToken=new-refresh-token-value; Path=/; HttpOnly; Secure; Max-Age=259200";
+
+        when(erpClient.refreshInErp(any())).thenReturn(Mono.just(
+                ResponseEntity.ok()
+                        .header("Set-Cookie", mockCookieHeader)
+                        .body(erpResponse)
+        ));
 
         webTestClient.post()
                 .uri("/api/v1/b2c/auth/refresh")
+                .cookie("refreshToken", "old-refresh-token")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(request)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -101,7 +110,7 @@ class BffAuthControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(registerRequest)
                 .exchange()
-                .expectStatus().isCreated() // Проверка ResponseEntity.status(HttpStatus.CREATED)
+                .expectStatus().isCreated()
                 .expectBody()
                 .jsonPath("$.status").isEqualTo("REGISTERED");
     }

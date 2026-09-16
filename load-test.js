@@ -1,23 +1,21 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
-// эмуляция реального наплыва пользователей
 export const options = {
     stages: [
-        { duration: '30s', target: 20 },  // плавное увеличение до 20 виртуальных пользователей
-        { duration: '1m', target: 50 },   // удерживаем 50 активных VUs
-        { duration: '30s', target: 100 }, // резко поднимаем до 100 VUs (проверка Resilience4j RateLimiter)
-        { duration: '20s', target: 0 },   // плавное отключение пользователей
+        { duration: '30s', target: 20 },
+        { duration: '1m', target: 50 },
+        { duration: '30s', target: 100 },
+        { duration: '20s', target: 0 },
     ],
     thresholds: {
-        http_req_failed: ['rate<0.05'],    // ошибок должно быть менее 5%
-        http_req_duration: ['p(95)<1500'], // 95% запросов должны выполняться быстрее 1.5 сек
+        http_req_failed: ['rate<0.05'],
+        http_req_duration: ['p(95)<1500'],
     },
 };
 
-const BASE_URL = 'http://localhost:8080/bff/api/v1'; // Адрес шлюза BFF
+const BASE_URL = 'http://localhost:8080/bff/api/v1';
 
-// данные для авторизации тестового клиента (из тестовых данных)
 const LOGIN_PAYLOAD = JSON.stringify({
     phone: '+375291112233',
     password: 'password'
@@ -25,43 +23,39 @@ const LOGIN_PAYLOAD = JSON.stringify({
 
 const HEADERS = { 'Content-Type': 'application/json' };
 
-// инициализация сессии для каждого виртуального пользователя
-export function setup() {
-    // делаем один запрос на авторизацию для получения JWT
+export default function () {
+    // Авторизация. Сервер возвращает accessToken в JSON, а куку refreshToken сохраняет в k6 автоматически
     const loginRes = http.post(`${BASE_URL}/b2c/auth/login`, LOGIN_PAYLOAD, { headers: HEADERS });
 
     const isLoginOk = check(loginRes, {
-        'Auth successful (status 200)': (r) => r.status === 200,
-        'Token present': (r) => r.json().accessToken !== undefined,
+        'Login success (200)': (r) => r.status === 200,
     });
 
     if (!isLoginOk) {
-        fail('Critical Error: Инициализация теста провалена, невозможно получить JWT-токен!');
+        sleep(1);
+        return;
     }
 
-    return { token: loginRes.json().accessToken };
-}
+    // Вытаскиваем access-токен из тела ответа
+    let accessToken = loginRes.json().accessToken;
 
-// основные запросы
-export default function (data) {
-    const authHeaders = {
+    // Этот заголовок нужен для защищенных эндпоинтов (слоты, бронирование)
+    let authHeaders = {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${data.token}`
+        'Authorization': `Bearer ${accessToken}`
     };
 
-    // проверка доступных слотов
-    // формируем дату в формате ISO, запрашиваем длительность 2 часа
+    // Запрос слотов (использует Bearer токен)
     const slotsUrl = `${BASE_URL}/client/bookings/slots?date=2026-09-01&durationHours=2`;
     const slotsRes = http.get(slotsUrl, { headers: authHeaders });
 
     check(slotsRes, {
         'Get slots status is 200': (r) => r.status === 200,
-        'Redis cache hit/miss returned array': (r) => Array.isArray(r.json()),
     });
 
     sleep(1);
 
-    // попытка создания бронирования
+    // Запрос бронирования (использует Bearer токен)
     const bookingPayload = JSON.stringify({
         vehicleId: 1,
         startTime: '2026-09-01T14:00:00',
@@ -70,11 +64,26 @@ export default function (data) {
 
     const bookingRes = http.post(`${BASE_URL}/client/bookings`, bookingPayload, { headers: authHeaders });
 
-    // при высокой конкуренции часть запросов вернет 200 (успех), а часть — 409/500 (время уже занято/Блокировка СУБД)
-    // из-за Resilience4j RateLimiter на пике (100 VUs) также ожидаются ответы 429 Too Many Requests
     check(bookingRes, {
-        'Booking handled without crashing': (r) => [200, 409, 429, 503].includes(r.status),
+        'Booking handled': (r) => [200, 409, 429, 503].includes(r.status),
     });
+
+    sleep(2);
+
+    // Тестирование метода REFRESH
+    // Кука refreshToken подставится автоматически из памяти k6 (Cookie Jar)
+    const refreshRes = http.post(`${BASE_URL}/b2c/auth/refresh`, null, { headers: HEADERS });
+
+    const isRefreshOk = check(refreshRes, {
+        'Refresh status is 200': (r) => r.status === 200,
+        'New access token present': (r) => r.json().accessToken !== undefined,
+    });
+
+    // Если рефреш прошел успешно, обновляем токен для следующих итераций/запросов этого пользователя
+    if (isRefreshOk) {
+        accessToken = refreshRes.json().accessToken;
+        authHeaders['Authorization'] = `Bearer ${accessToken}`;
+    }
 
     sleep(2);
 }

@@ -1,11 +1,12 @@
 package by.vs.erp.employee.controller;
 
 import by.vs.erp.BaseIntegrationTest;
+import by.vs.erp.common.security.JwtProvider;
 import by.vs.erp.employee.dto.JwtResponse;
 import by.vs.erp.employee.dto.LoginRequest;
-import by.vs.erp.employee.dto.RefreshRequest;
 import by.vs.erp.employee.service.AuthService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -29,6 +30,9 @@ class AuthControllerTest extends BaseIntegrationTest {
     @MockBean
     private AuthService authService;
 
+    @MockBean
+    private JwtProvider jwtProvider;
+
     @Test
     @DisplayName("POST /auth/login: Успешный вход")
     void shouldLoginAndReturnJwt() throws Exception {
@@ -45,24 +49,28 @@ class AuthControllerTest extends BaseIntegrationTest {
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("access-token-string"))
-                .andExpect(jsonPath("$.refreshToken").value("refresh-token-string"));
+                .andExpect(cookie().exists("refreshToken"))
+                .andExpect(cookie().httpOnly("refreshToken", true));
     }
 
     @Test
     @DisplayName("POST /auth/refresh: Успешный рефреш")
     void shouldRefreshTokens() throws Exception {
-        RefreshRequest refreshRequest = new RefreshRequest();
-        refreshRequest.setRefreshToken("old-refresh-token");
+        String oldRefreshToken = "old-refresh-token";
+        Cookie cookie = new Cookie("refreshToken", oldRefreshToken);
 
-        JwtResponse jwtResponse = new JwtResponse("new-access-token", "new-refresh-token");
+        Mockito.when(jwtProvider.validateRefreshToken(oldRefreshToken)).thenReturn(true);
 
-        Mockito.when(authService.refresh(any(RefreshRequest.class))).thenReturn(jwtResponse);
+        JwtResponse newJwtResponse = new JwtResponse("new-access-token", "new-refresh-token");
+        Mockito.when(authService.refresh(any())).thenReturn(newJwtResponse);
 
         mockMvc.perform(post("/api/v1/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(refreshRequest)))
+                        .cookie(cookie)
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("new-access-token"))
-                .andExpect(jsonPath("$.refreshToken").value("new-refresh-token"));
+                .andExpect(cookie().value("refreshToken", "new-refresh-token"))
+                .andExpect(cookie().httpOnly("refreshToken", true));
     }
+
 }

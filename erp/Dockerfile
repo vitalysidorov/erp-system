@@ -13,5 +13,5 @@ COPY --from=builder /app/build/libs/*.jar app.jar
 
 ENV JAVA_OPTS="-XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
 
-EXPOSE 8080
+EXPOSE 8085
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

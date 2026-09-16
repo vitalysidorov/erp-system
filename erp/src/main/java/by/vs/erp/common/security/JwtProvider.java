@@ -86,5 +86,4 @@ public class JwtProvider {
                 .parseSignedClaims(token)
                 .getPayload();
     }
-
 }
